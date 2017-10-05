@@ -7,7 +7,10 @@ import {
 } from 'react-native'
 const FBSDK = require('react-native-fbsdk');
 const {
-  LoginManager,
+  LoginButton,
+  AccessToken,
+  GraphRequest,
+  GraphRequestManager,
 } = FBSDK;
 
 export default class App extends Component {
@@ -22,22 +25,6 @@ export default class App extends Component {
     }
   }
 
-  _fbLogin(){
-    LoginManager.logInWithReadPermissions(['public_profile']).then(
-      function(result) {
-        if (result.isCancelled) {
-          alert('Login cancelled');
-        } else {
-          alert('Login success with permissions: '+result.grantedPermissions.toString());
-            this.setState({ login: true });
-        }
-      },
-      function(error) {
-        alert('Login fail with error: ' + error);
-      }
-    );
-  }
-
   _onPressGenerate() {
     this.setState({loading: true})
     let randomNumber = Math.floor(Math.random() * 100)
@@ -50,7 +37,7 @@ export default class App extends Component {
   render() {
     return (
       <View style={styles.container}>
-        {this.state.login == true ? <View><Text style={styles.welcome}>
+        <Text style={styles.welcome}>
           Hello, {this.state.name}!
         </Text>
 
@@ -63,7 +50,49 @@ export default class App extends Component {
           title="GENERATE"
           color="#333333"
           disabled={this.state.loading}/>
-          </View> :  <View> <Button style={styles.fbButton} onPress={() => this._fbLogin()} title="Login With Facebook" color="#333333" /> </View>}
+
+          <LoginButton
+          publishPermissions={["publish_actions"]}
+          onLoginFinished={
+            (error, result) => {
+              if (error) {
+                alert("login has error: " + result.error);
+              } else if (result.isCancelled) {
+                alert("login is cancelled.");
+              } else {
+                AccessToken.getCurrentAccessToken().then(
+                  (data) => {
+                    alert(data.accessToken.toString())
+                    const responseInfoCallback = (error, result) => {
+                      if (error) {
+                        console.log(error)
+                        alert('Error fetching data: ' + error.toString());
+                      } else {
+                        console.log(result)
+                        alert('Success fetching data: ' + result.toString());
+                      }
+                    }
+
+                    const infoRequest = new GraphRequest(
+                      '/me',
+                      {
+                        accessToken: data.accessToken,
+                        parameters: {
+                          fields: {
+                            string: 'email,name,first_name,middle_name,last_name'
+                          }
+                        }
+                      },
+                      responseInfoCallback
+                    );
+
+                    new GraphRequestManager().addRequest(infoRequest).start();
+                  }
+                )
+              }
+            }
+          }
+          onLogoutFinished={() => alert("logout.")}/>
       </View>
     );
   }
