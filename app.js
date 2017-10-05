@@ -27,30 +27,54 @@ export default class App extends Component {
 
   _onPressGenerate() {
     this.setState({loading: true})
-    let randomNumber = Math.floor(Math.random() * 100)
-
-    setTimeout(() => {
-      this.setState({randomNumber, loading: false})
-    }, 1000)
+    fetch('https://api.random.org/json-rpc/1/invoke', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'generateIntegers',
+        params: {
+          apiKey: 'ba471cb0-0514-4ffb-8eaa-ed8930b296d8',
+          n: 1,
+          min: 1,
+          max: 1000,
+          replacement: true
+        },
+        id: 42
+      })
+    })
+    .then((response => response.json()))
+    .then((responseJson) => {
+      setTimeout(() => {
+        this.setState({randomNumber: responseJson.result.random.data, loading: false})
+      }, 1000)
+    })
   }
 
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>
-          Hello, {this.state.name}!
-        </Text>
+        { this.state.login == true ?
+          <View style={styles.randomConatiner}>
+          <Text style={styles.welcome}>
+            Hello, {this.state.name}!
+          </Text>
 
-        <Text style={styles.number}>
-          {this.state.loading ? '...' : this.state.randomNumber}
-        </Text>
+          <Text style={styles.number}>
+            {this.state.loading ? '...' : this.state.randomNumber}
+          </Text>
 
-        <Button
-          onPress={() => this._onPressGenerate()}
-          title="GENERATE"
-          color="#333333"
-          disabled={this.state.loading}/>
-
+          <Button
+            onPress={() => this._onPressGenerate()}
+            title="GENERATE"
+            color="#333333"
+            disabled={this.state.loading}/>
+            </View>
+          : null
+        }
           <LoginButton
           publishPermissions={["publish_actions"]}
           onLoginFinished={
@@ -62,14 +86,11 @@ export default class App extends Component {
               } else {
                 AccessToken.getCurrentAccessToken().then(
                   (data) => {
-                    alert(data.accessToken.toString())
                     const responseInfoCallback = (error, result) => {
                       if (error) {
                         console.log(error)
-                        alert('Error fetching data: ' + error.toString());
                       } else {
-                        console.log(result)
-                        alert('Success fetching data: ' + result.toString());
+                        this.setState({name: result.name, login: true})
                       }
                     }
 
@@ -92,7 +113,9 @@ export default class App extends Component {
               }
             }
           }
-          onLogoutFinished={() => alert("logout.")}/>
+          onLogoutFinished={() => {
+            this.setState({login: false})
+          }}/>
       </View>
     );
   }
@@ -116,4 +139,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     fontSize: 50,
   },
+  randomConatiner:{
+    marginBottom: 50
+  }
 })
